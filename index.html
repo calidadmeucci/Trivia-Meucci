@@ -111,7 +111,7 @@ textarea{resize:vertical;min-height:60px}
   <div class="promo-box">
     <div class="promo-title">🎯 COMO PARTICIPAR</div>
     <p>Contesta de manera correcta <strong style="color:#fff">3 preguntas</strong> en el menor tiempo posible y participa por <strong style="color:#fbbf24">premios sorpresa!</strong></p>
-    <p class="premio">🏆 Los primeros 5 puestos tienen premio</p>
+    <p class="premio" id="promo-premio">🏆 Los primeros 3 puestos tienen premio</p>
     <p class="suerte">MUCHA SUERTE!</p>
   </div>
   <div style="margin-top:1.5rem;display:flex;flex-direction:column;align-items:center;width:100%;gap:0.5rem">
@@ -172,7 +172,7 @@ textarea{resize:vertical;min-height:60px}
 <div id="s-ranking" class="screen" style="justify-content:flex-start;padding-top:2rem">
   <p style="font-size:0.75rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem">Grupo Meucci · Calidad</p>
   <div class="ranking-title">🏆 RANKING</div>
-  <div class="ranking-sub">Solo participantes con 3/3 correctas · Top 5 con premio</div>
+  <div class="ranking-sub" id="ranking-sub-txt">Solo participantes con 3/3 correctas · Top 3 con premio</div>
   <div class="tab-bar">
     <button class="tab active" onclick="setTab('global',this)">Global</button>
     <button class="tab" onclick="setTab('sector',this)">Por Sector</button>
@@ -228,6 +228,14 @@ textarea{resize:vertical;min-height:60px}
     </div>
   </div>
 
+  <div style="width:100%;max-width:600px;margin-bottom:1rem">
+    <div style="background:#111;border:1px solid #333;border-radius:12px;padding:1.2rem">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.05em;margin-bottom:0.75rem">🎁 TEXTO DE PREMIO EN PORTADA</div>
+      <input type="text" id="cfg-premio" placeholder="Ej: Los primeros 3 puestos tienen premio" style="margin-bottom:0.5rem">
+      <button class="btn small" style="max-width:180px" onclick="savePromoText()">GUARDAR TEXTO</button>
+      <div id="premio-msg"></div>
+    </div>
+  </div>
   <div style="width:100%;max-width:600px;margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap">
     <button class="btn small" style="max-width:200px" onclick="openModal(null)">+ Nueva pregunta</button>
     <button class="btn small outline" style="max-width:220px" onclick="confirmResetRanking()">🗑 Limpiar ranking</button>
@@ -322,6 +330,13 @@ async function saveTimeConfig(){
   var inicioVal=document.getElementById('cfg-inicio').value;
   var finVal=document.getElementById('cfg-fin').value;
   var rec=await loadBin()||{};
+  // Preservar entries y questions al guardar horario
+  var entriesToKeep=rec.entries||[];
+  var questionsToKeep=rec.questions||[];
+  var promoToKeep=rec.promoText||'';
+  rec.entries=entriesToKeep;
+  rec.questions=questionsToKeep;
+  rec.promoText=promoToKeep;
   rec.timeConfig={
     inicio:inicioVal?new Date(inicioVal).getTime():null,
     fin:finVal?new Date(finVal).getTime():null
@@ -334,6 +349,12 @@ async function saveTimeConfig(){
 
 async function clearTimeConfig(){
   var rec=await loadBin()||{};
+  var entriesToKeep=rec.entries||[];
+  var questionsToKeep=rec.questions||[];
+  var promoToKeep=rec.promoText||'';
+  rec.entries=entriesToKeep;
+  rec.questions=questionsToKeep;
+  rec.promoText=promoToKeep;
   rec.timeConfig={inicio:null,fin:null};
   await saveBin(rec);
   document.getElementById('cfg-inicio').value='';
@@ -367,6 +388,31 @@ async function loadTimeConfig(){
     if(cfg.fin) document.getElementById('cfg-fin').value=new Date(cfg.fin).toISOString().slice(0,16);
   }
   showTimeStatus(cfg);
+  // Cargar texto de premio
+  if(rec.promoText) document.getElementById('cfg-premio').value=rec.promoText;
+}
+
+async function savePromoText(){
+  var txt=document.getElementById('cfg-premio').value.trim();
+  if(!txt){document.getElementById('premio-msg').innerHTML='<div class="msg err">Escribi el texto primero</div>';return;}
+  var rec=await loadBin()||{};
+  var entriesToKeep=rec.entries||[];
+  var questionsToKeep=rec.questions||[];
+  rec.entries=entriesToKeep;
+  rec.questions=questionsToKeep;
+  rec.promoText=txt;
+  await saveBin(rec);
+  document.getElementById('premio-msg').innerHTML='<div class="msg ok">Texto guardado!</div>';
+  setTimeout(function(){document.getElementById('premio-msg').innerHTML='';},2000);
+}
+
+async function loadPromoText(){
+  var rec=await loadBin()||{};
+  var txt=rec.promoText||'Los primeros 3 puestos tienen premio';
+  var el=document.getElementById('promo-premio');
+  var el2=document.getElementById('ranking-sub-txt');
+  if(el) el.textContent='🏆 '+txt;
+  if(el2) el2.textContent='Solo participantes con 3/3 correctas · '+txt;
 }
 
 // ===== NAVEGACION =====
@@ -396,6 +442,7 @@ function resetGame(){
 
 // Chequeo inicial al cargar la pagina
 window.addEventListener('load', function(){
+  loadPromoText();
   checkGameTime().then(function(status){
     if(status==='finished'){
       document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
