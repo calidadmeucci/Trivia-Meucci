@@ -110,7 +110,7 @@ textarea{resize:vertical;min-height:60px}
   <p class="subtitle">Demostra lo que aprendiste!</p>
   <div class="promo-box">
     <div class="promo-title">🎯 COMO PARTICIPAR</div>
-    <p>Contesta de manera correcta <strong style="color:#fff">3 preguntas</strong> en el menor tiempo posible y participa por <strong style="color:#fbbf24">premios sorpresa!</strong></p>
+    <p id="promo-frase">Contesta de manera correcta 3 preguntas en el menor tiempo posible y participa por premios sorpresa!</p>
     <p class="premio" id="promo-premio">🏆 Los primeros 3 puestos tienen premio</p>
     <p class="suerte">MUCHA SUERTE!</p>
   </div>
@@ -230,9 +230,12 @@ textarea{resize:vertical;min-height:60px}
 
   <div style="width:100%;max-width:600px;margin-bottom:1rem">
     <div style="background:#111;border:1px solid #333;border-radius:12px;padding:1.2rem">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.05em;margin-bottom:0.75rem">🎁 TEXTO DE PREMIO EN PORTADA</div>
-      <input type="text" id="cfg-premio" placeholder="Ej: Los primeros 3 puestos tienen premio" style="margin-bottom:0.5rem">
-      <button class="btn small" style="max-width:180px" onclick="savePromoText()">GUARDAR TEXTO</button>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.05em;margin-bottom:0.75rem">🎁 TEXTOS DE PORTADA</div>
+      <label style="margin-top:0">Frase de participacion</label>
+      <input type="text" id="cfg-frase" placeholder="Ej: Contesta 3 preguntas en el menor tiempo posible..." style="margin-bottom:0.75rem">
+      <label>Texto de premio</label>
+      <input type="text" id="cfg-premio" placeholder="Ej: Los primeros 3 puestos tienen premio" style="margin-bottom:0.75rem">
+      <button class="btn small" style="max-width:180px" onclick="savePromoText()">GUARDAR TEXTOS</button>
       <div id="premio-msg"></div>
     </div>
   </div>
@@ -337,6 +340,7 @@ async function saveTimeConfig(){
   rec.entries=entriesToKeep;
   rec.questions=questionsToKeep;
   rec.promoText=promoToKeep;
+  rec.promoFrase=rec.promoFrase||'';
   rec.timeConfig={
     inicio:inicioVal?new Date(inicioVal).getTime():null,
     fin:finVal?new Date(finVal).getTime():null
@@ -355,6 +359,7 @@ async function clearTimeConfig(){
   rec.entries=entriesToKeep;
   rec.questions=questionsToKeep;
   rec.promoText=promoToKeep;
+  rec.promoFrase=rec.promoFrase||'';
   rec.timeConfig={inicio:null,fin:null};
   await saveBin(rec);
   document.getElementById('cfg-inicio').value='';
@@ -388,31 +393,40 @@ async function loadTimeConfig(){
     if(cfg.fin) document.getElementById('cfg-fin').value=new Date(cfg.fin).toISOString().slice(0,16);
   }
   showTimeStatus(cfg);
-  // Cargar texto de premio
+  // Cargar textos de portada
   if(rec.promoText) document.getElementById('cfg-premio').value=rec.promoText;
+  if(rec.promoFrase) document.getElementById('cfg-frase').value=rec.promoFrase;
 }
 
 async function savePromoText(){
-  var txt=document.getElementById('cfg-premio').value.trim();
-  if(!txt){document.getElementById('premio-msg').innerHTML='<div class="msg err">Escribi el texto primero</div>';return;}
+  var premio=document.getElementById('cfg-premio').value.trim();
+  var frase=document.getElementById('cfg-frase').value.trim();
   var rec=await loadBin()||{};
-  var entriesToKeep=rec.entries||[];
-  var questionsToKeep=rec.questions||[];
-  rec.entries=entriesToKeep;
-  rec.questions=questionsToKeep;
-  rec.promoText=txt;
+  rec.entries=rec.entries||[];
+  rec.questions=rec.questions||[];
+  // Ambos opcionales — solo guarda si tiene valor, si no deja el anterior
+  if(premio) rec.promoText=premio;
+  if(frase) rec.promoFrase=frase;
   await saveBin(rec);
-  document.getElementById('premio-msg').innerHTML='<div class="msg ok">Texto guardado!</div>';
+  applyPromoTexts(rec.promoText||'', rec.promoFrase||'');
+  document.getElementById('premio-msg').innerHTML='<div class="msg ok">Textos guardados!</div>';
   setTimeout(function(){document.getElementById('premio-msg').innerHTML='';},2000);
+}
+
+function applyPromoTexts(premio, frase){
+  var elPremio=document.getElementById('promo-premio');
+  var elFrase=document.getElementById('promo-frase');
+  var elRank=document.getElementById('ranking-sub-txt');
+  if(elPremio&&premio) elPremio.textContent='🏆 '+premio;
+  if(elFrase&&frase) elFrase.textContent=frase;
+  if(elRank&&premio) elRank.textContent='Solo participantes con 3/3 correctas · '+premio;
 }
 
 async function loadPromoText(){
   var rec=await loadBin()||{};
-  var txt=rec.promoText||'Los primeros 3 puestos tienen premio';
-  var el=document.getElementById('promo-premio');
-  var el2=document.getElementById('ranking-sub-txt');
-  if(el) el.textContent='🏆 '+txt;
-  if(el2) el2.textContent='Solo participantes con 3/3 correctas · '+txt;
+  var premio=rec.promoText||'Los primeros 3 puestos tienen premio';
+  var frase=rec.promoFrase||'Contesta de manera correcta 3 preguntas en el menor tiempo posible y participa por premios sorpresa!';
+  applyPromoTexts(premio, frase);
 }
 
 // ===== NAVEGACION =====
